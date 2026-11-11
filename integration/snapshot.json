@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "source": "CARLA",
+  "frame": 18695,
+  "elapsed_seconds": 23.50298660621047,
+  "map_name": "Carla/Maps/Town01",
+  "coordinate_system": "CARLA left-handed XY, yaw in degrees",
+  "ego": {
+    "actor_id": 197,
+    "type_id": "vehicle.tesla.model3",
+    "role_name": "hero",
+    "pose_carla": {
+      "x_m": 334.9405822753906,
+      "y_m": 281.40447998046875,
+      "z_m": 0.001814517891034484,
+      "yaw_deg": 92.18494415283203
+    },
+    "velocity_carla_mps": {
+      "x": -0.1935543715953827,
+      "y": 6.88153600692749,
+      "z": -5.552768470806768e-06
+    },
+    "acceleration_carla_mps2": {
+      "x": 0.23798593878746033,
+      "y": 0.7922706604003906,
+      "z": 8.467638690490276e-05
+    },
+    "bbox_carla_local": {
+      "half_length_m": 2.3958897590637207,
+      "half_width_m": 1.081725001335144,
+      "half_height_m": 0.7438300251960754,
+      "center_offset_m": {
+        "x": 0.029218750074505806,
+        "y": -2.384185648907078e-08,
+        "z": 0.7358605265617371
+      }
+    }
+  },
+  "obstacles": []
+}
