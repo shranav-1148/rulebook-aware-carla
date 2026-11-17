@@ -11,7 +11,7 @@ import json
 import math
 from pathlib import Path
 
-from carla_calibrate_m6b3 import preflight, read_stable_observation, actor_origin_for_center, DEFAULT_OBSERVATION
+from integration.carla_calibrate_m6b3 import preflight, read_stable_observation, actor_origin_for_center, DEFAULT_OBSERVATION
 
 DEFAULT_OUT = Path(__file__).resolve().parent / 'output/carla_calibration_6b3/drivetrain_probe_001'
 

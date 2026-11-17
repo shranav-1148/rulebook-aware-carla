@@ -12,7 +12,7 @@ from unittest.mock import patch
 import carla_feedback_reference_m6b4b as ref
 import carla_feedback_track_m6b4b as track
 import carla_model_m6b4 as model
-from test_carla_m6b4 import (FakeBlueprint,FakeCarla,FakeWorld,save_fake_trial)
+from integration.test_carla_m6b4 import (FakeBlueprint,FakeCarla,FakeWorld,save_fake_trial)
 
 
 def adjust_synthetic_trial(sample_path):
