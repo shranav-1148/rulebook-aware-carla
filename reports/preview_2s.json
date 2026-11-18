@@ -1,0 +1,191 @@
+{
+  "milestone": "6B-2",
+  "mode": "offline_observation_replay_no_carla",
+  "source_frame": 503572,
+  "start_state": {
+    "x": 385.94095928781053,
+    "y": 1.9926286552211292,
+    "yaw": 3.141058423475123,
+    "v": -0.0,
+    "steer": 0.0
+  },
+  "start_station_m": 4.0519465806577205e-05,
+  "start_offset_m": 1.5579819280964162e-07,
+  "minimum_final_station_m": 0.2000405194658066,
+  "settings": {
+    "dt_s": 1.0,
+    "horizon_steps": 2,
+    "integration_dt_s": 0.1,
+    "speed_initial_mps": 6.0,
+    "speed_min_mps": 0.0,
+    "speed_max_mps": 8.0,
+    "accelerations_mps2": [
+      -1.0,
+      0.0,
+      1.0
+    ],
+    "steering_rates_deg_s": [
+      -8.0,
+      -4.0,
+      0.0,
+      4.0,
+      8.0
+    ],
+    "max_abs_steering_deg": 25.0,
+    "wheelbase_m": 2.7,
+    "max_lateral_accel_mps2": 3.0,
+    "length_m": 4.791779518127441,
+    "width_m": 2.163450002670288,
+    "road_area_tolerance_m2": 1e-05,
+    "max_abs_route_offset_m": 2.5,
+    "max_abs_heading_error_deg": 35.0,
+    "obstacle_station_m": 21.0,
+    "obstacle_offset_m": -2.4,
+    "obstacle_radius_m": 0.65,
+    "clearance_margin_m": 1.6,
+    "station_bin_m": 2.0,
+    "lateral_bin_m": 0.25,
+    "heading_bin_deg": 5.0,
+    "speed_bin_mps": 1.0,
+    "steering_bin_deg": 4.0,
+    "beam_width": 25
+  },
+  "measured_ego_bbox_length_width_m": [
+    4.791779518127441,
+    2.163450002670288
+  ],
+  "measured_obstacle_footprint_area_m2": 0.11837888573063537,
+  "measured_obstacle_bbox_cr_xy_exterior_m": [
+    [
+      363.42022705078125,
+      4.232530117034912
+    ],
+    [
+      363.42022705078125,
+      4.576599597930908
+    ],
+    [
+      363.7642822265625,
+      4.576599597930908
+    ],
+    [
+      363.7642822265625,
+      4.232530117034912
+    ],
+    [
+      363.42022705078125,
+      4.232530117034912
+    ]
+  ],
+  "hard_obstacle_margin_m": 0.1,
+  "stability_and_model_issues": [
+    "ego is not vertically settled (|vz|=1.087 m/s)",
+    "CARLA collision mesh remains unverified; only bbox proxy is available"
+  ],
+  "executed_carla_control": false,
+  "ready_for_live_control": false,
+  "limitations": [
+    "One snapshot cannot certify settled vehicle dynamics",
+    "CARLA collision mesh unverified; uses XY bounding-box proxy",
+    "2.7m wheelbase and rear-axle offset remain assumptions",
+    "Uncalibrated nonzero steering is rejected",
+    "No control actuation/feedback/tire/engine model",
+    "Only integration-sampled collision checks, not continuous guarantees",
+    "Beam-pruned lexicographic proxy ranking is NOT the original Rulebook"
+  ],
+  "offline_unstable_override_used": true,
+  "status": "offline_plan_generated_unstable_input",
+  "shared_tree": true,
+  "tree_nodes_retained": 36,
+  "layers": [
+    {
+      "step": 1,
+      "parents": 1,
+      "viable_candidate_edges": 10,
+      "retained_states": 10,
+      "pruned_candidates": 0
+    },
+    {
+      "step": 2,
+      "parents": 10,
+      "viable_candidate_edges": 125,
+      "retained_states": 25,
+      "pruned_candidates": 100
+    }
+  ],
+  "rejections_by_reason": {
+    "speed_limit": 30
+  },
+  "profiles": {
+    "safety_first": {
+      "costs_R9_R5_R4": [
+        0.0,
+        2.4362996408436675e-14,
+        2.0
+      ],
+      "final_station_m": 2.000040519465761,
+      "diagnostic": {
+        "sample_count": 21,
+        "maximum_road_outside_area_m2": 0.0,
+        "minimum_bbox_proxy_clearance_after_margin_m": 16.371956762201318,
+        "sampled_road_pass": true,
+        "sampled_hard_obstacle_pass": true,
+        "sampled_max_speed_mps": 2.000000000000001,
+        "sampled_min_speed_mps": -0.0,
+        "sampled_max_abs_steering_deg": 0.0
+      },
+      "actions": [
+        {
+          "acceleration_mps2": 1.0,
+          "steering_rate_deg_s": 0.0
+        },
+        {
+          "acceleration_mps2": 1.0,
+          "steering_rate_deg_s": 0.0
+        }
+      ]
+    },
+    "corridor_first": {
+      "costs_R9_R5_R4": [
+        0.0,
+        2.4362996408436675e-14,
+        2.0
+      ],
+      "final_station_m": 2.000040519465761,
+      "diagnostic": {
+        "sample_count": 21,
+        "maximum_road_outside_area_m2": 0.0,
+        "minimum_bbox_proxy_clearance_after_margin_m": 16.371956762201318,
+        "sampled_road_pass": true,
+        "sampled_hard_obstacle_pass": true,
+        "sampled_max_speed_mps": 2.000000000000001,
+        "sampled_min_speed_mps": -0.0,
+        "sampled_max_abs_steering_deg": 0.0
+      },
+      "actions": [
+        {
+          "acceleration_mps2": 1.0,
+          "steering_rate_deg_s": 0.0
+        },
+        {
+          "acceleration_mps2": 1.0,
+          "steering_rate_deg_s": 0.0
+        }
+      ]
+    }
+  },
+  "divergence": {
+    "max_time_aligned_separation_m": 0.0,
+    "final_separation_m": 0.0,
+    "max_station_difference_m": 0.0,
+    "max_lateral_offset_difference_m": 0.0,
+    "final_station_difference_m": 0.0
+  },
+  "source_provenance": {
+    "observation_sha256": "f903b710377d4e6293e6c007a4fd7abc90c34e1db4fc9403cbaf731ee2281d66",
+    "summary_sha256": "fef99340dc872af355fcde310dca4bc24a1010287252776a1b8fb790852d4b44",
+    "route_sha256": "2de19d8ba7d2d3ecbb939851df26cecaa1dbc744879493192f9c9cc82a98eca9",
+    "map_sha256": "ec39bef27dea672bf05a6ad70cf437f38370c0963ad297a3fdde2a2bfac1cdfb",
+    "validation_lanelet_count": 300
+  }
+}

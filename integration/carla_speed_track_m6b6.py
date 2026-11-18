@@ -12,13 +12,20 @@ import json
 import math
 from pathlib import Path
 
+# Provides CARLA lifecycle operations and shared actor telemetry handling.
 import carla_calibrate_m6b3 as b
+# Reuses the established motion and steering safety limits.
 import carla_track_m6b4 as old
+# Reuses route-tracking metrics and isolation checks.
 import carla_feedback_track_m6b4b as prev
+# Provides the CommonRoad route sample sequence.
 import carla_route_reference_m6b5 as gen
+# Provides the M6B-5 steering-only command path.
 import carla_route_track_m6b5 as core
+# Provides the descriptive longitudinal response source.
 import carla_speed_fit_m6b6 as fit
-from carla_model_m6b4 import DT,finite,digest,wrap
+# Shared timing, numeric, hashing, and angle primitives.
+from carla_m6b_common import DT, finite, digest, wrap
 
 HERE=Path(__file__).resolve().parent
 DEFAULT_REF=HERE/'output/carla_calibration_6b5/route_reference_v1.json'
@@ -105,6 +112,7 @@ def command_for_reference(ref, last, model, fit_doc, feedback_on):
 def core_command_for_reference(ref,last,model):
     """Reuses 6B-5 route curvature feedforward with NO steering feedback."""
     th,steer,br,ff,corr=core.command_for_reference(ref,last,model,False)
+    # Validation assertion: require corr==0. to hold before execution continues.
     assert corr==0.
     return th,steer,br,ff
 
@@ -278,6 +286,7 @@ def execute(args,obs,model,ref,geometry,fit_doc):
         reason='Interrupted by user'
     except Exception as exc:
         reason=type(exc).__name__+': '+str(exc)
+    # Cleanup path: always execute this block after the guarded operation to close resources or restore state.
     finally:
         if ego is not None:
             try:

@@ -12,9 +12,14 @@ import json
 import math
 from pathlib import Path
 
+# Provides CARLA lifecycle and actor telemetry operations.
 import carla_calibrate_m6b3 as b
+# Provides inherited tracking safety limits and command validation.
 import carla_track_m6b4 as old
-from carla_model_m6b4 import DT,digest,finite,model_for_tracking,read_trial,wrap
+# Provides model-file validation and calibration-trial loading.
+from carla_model_m6b4 import model_for_tracking, read_trial
+# Shared timing, numeric, hashing, and angle primitives.
+from carla_m6b_common import DT, digest, finite, wrap
 from carla_feedback_reference_m6b4b import SCHEMA,load_reference
 
 HERE=Path(__file__).resolve().parent
@@ -243,6 +248,7 @@ def execute(args,obs,trial,model,reference):
         reason='Interrupted by user'
     except Exception as exc:
         reason=type(exc).__name__+': '+str(exc)
+    # Cleanup path: always execute this block after the guarded operation to close resources or restore state.
     finally:
         if ego is not None:
             try:

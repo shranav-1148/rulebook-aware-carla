@@ -630,6 +630,7 @@ def drive(args, obs, mode):
         abort_reason='interrupted by user'
     except Exception as exc:
         abort_reason=type(exc).__name__+': '+str(exc)
+    # Cleanup path: always execute this block after the guarded operation to close resources or restore state.
     finally:
         if ego is not None:
             failure_state_at_cleanup=safe_failure_state(ego)

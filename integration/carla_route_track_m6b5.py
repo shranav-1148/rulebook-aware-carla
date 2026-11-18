@@ -11,11 +11,16 @@ import json
 import math
 from pathlib import Path
 
+# Provides CARLA preflight, sampling, control, ticking, and result persistence.
 import carla_calibrate_m6b3 as b
+# Supplies inherited low-level tracking limits and command behavior.
 import carla_track_m6b4 as old
+# Supplies paired-run metrics and periodic isolation checks.
 import carla_feedback_track_m6b4b as prev
+# Supplies the independently generated CommonRoad route reference.
 import carla_route_reference_m6b5 as gen
-from carla_model_m6b4 import DT,finite,digest,wrap
+# Shared timing, numeric, hashing, and angle primitives.
+from carla_m6b_common import DT, finite, digest, wrap
 
 HERE=Path(__file__).resolve().parent
 DEFAULT_REF=HERE/'output/carla_calibration_6b5/route_reference_v1.json'
@@ -206,6 +211,7 @@ def execute(args,obs,model,ref,geometry):
         reason='Interrupted by user'
     except Exception as exc:
         reason=type(exc).__name__+': '+str(exc)
+    # Cleanup path: always execute this block after the guarded operation to close resources or restore state.
     finally:
         if ego is not None:
             try:

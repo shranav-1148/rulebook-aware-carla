@@ -1,28 +1,43 @@
 """Offline and mocked-CARLA tests for Milestone 6B-1 (no CARLA server needed)."""
+# Import dependency: json supplies types or behavior used by this test module.
 import json
+# Import dependency: math supplies types or behavior used by this test module.
 import math
+# Import dependency: pathlib supplies types or behavior used by this test module.
 from pathlib import Path
+# Import dependency: tempfile supplies types or behavior used by this test module.
 import tempfile
+# Import dependency: types supplies types or behavior used by this test module.
 import types
+# Import dependency: unittest supplies types or behavior used by this test module.
 import unittest
+# Import dependency: unittest.mock supplies types or behavior used by this test module.
 from unittest.mock import patch
 
+# Import dependency: carla_observe_m6b1 supplies types or behavior used by this test module.
 import carla_observe_m6b1 as m
 
 
+# Helper routine: obj; exposes a focused operation or synthetic fixture while keeping test intent readable.
 def obj(**kw): return types.SimpleNamespace(**kw)
 
 
+# Test class BBox: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class BBox:
+    # Helper routine: init; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def __init__(self, lx=0.03, ly=0, lz=0.4, ex=2.2, ey=0.95, ez=0.8):
         self.location=obj(x=lx,y=ly,z=lz)
         self.extent=obj(x=ex,y=ey,z=ez)
+    # Helper routine: get world vertices; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_world_vertices(self, pose):
         angle=math.radians(pose.rotation.yaw)
         c,s=math.cos(angle),math.sin(angle)
         verts=[]
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for i in (-1,1):
+            # Repeated scenario: exercise the related states independently and retain each assertion result.
             for j in (-1,1):
+                # Repeated scenario: exercise the related states independently and retain each assertion result.
                 for k in (-1,1):
                     a=self.location.x+i*self.extent.x
                     b=self.location.y+j*self.extent.y
@@ -32,7 +47,9 @@ class BBox:
         return verts
 
 
+# Test class Actor: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class Actor:
+    # Helper routine: init; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def __init__(self, ident, typ, pose, bbox=None, vel=None):
         self.id,self.type_id=ident,typ
         self.pose=pose
@@ -41,47 +58,65 @@ class Actor:
         self.destroyed=False
         self.steer=(0.,0.)
         self.transform_calls=0
+    # Helper routine: get transform; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_transform(self): return self.pose
+    # Helper routine: set transform; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def set_transform(self, t):
         self.pose=t
         self.transform_calls+=1
+    # Helper routine: get wheel steer angle; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_wheel_steer_angle(self, side):
         return self.steer[0] if side=='FL' else self.steer[1]
+    # Helper routine: destroy; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def destroy(self):
         self.destroyed=True
         return True
 
 
+# Helper routine: pose; exposes a focused operation or synthetic fixture while keeping test intent readable.
 def pose(x,y,z=0,yaw=-180):
     return obj(location=obj(x=x,y=y,z=z),rotation=obj(yaw=yaw,pitch=0.,roll=0.))
 
 
+# Test class FakeSnapActor: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class FakeSnapActor:
+    # Helper routine: init; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def __init__(self, actor): self.actor=actor
+    # Helper routine: get transform; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_transform(self): return self.actor.pose
+    # Helper routine: get velocity; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_velocity(self): return self.actor.vel
+    # Helper routine: get acceleration; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_acceleration(self): return obj(x=0.,y=0.,z=0.)
 
 
+# Test class FakeSnapshot: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class FakeSnapshot:
+    # Helper routine: init; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def __init__(self, actors, frame=12):
         self.actors={a.id:a for a in actors}
         self.frame=frame
         self.timestamp=obj(elapsed_seconds=3.0,delta_seconds=.05)
+    # Helper routine: find; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def find(self, ident):
         a=self.actors.get(ident)
         return FakeSnapActor(a) if a is not None else None
 
 
+# Test class FakeWorld: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class FakeWorld:
+    # Helper routine: init; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def __init__(self):
         self.actors=[]
         self.wait_calls=0
         self.tick_calls=0
         self.can_spawn_prop=True
+    # Helper routine: try spawn actor; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def try_spawn_actor(self, bp, transform):
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         if bp.id.startswith('static.prop.') and not self.can_spawn_prop:
             return None
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         if bp.id.startswith('vehicle.'):
             bb=BBox(lx=.029,ly=0.,lz=.6,ex=2.2,ey=.95,ez=.8)
         else:
@@ -89,18 +124,23 @@ class FakeWorld:
         actor=Actor(200+len(self.actors),bp.id,transform,bb)
         self.actors.append(actor)
         return actor
+    # Helper routine: get map; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def get_map(self):
         return obj(get_waypoint=lambda *a,**k: obj(transform=pose(363.59,-1.99,0)))
+    # Helper routine: wait for tick; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def wait_for_tick(self, timeout):
         self.wait_calls+=1
         return FakeSnapshot(self.actors)
+    # Helper routine: tick; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def tick(self):
         self.tick_calls+=1
         raise AssertionError('Never tick the world in Milestone 6B-1')
 
 
+# Test class Tests: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class Tests(unittest.TestCase):
     @classmethod
+    # Helper routine: setUpClass; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def setUpClass(cls):
         cls.context={
             'route':[(0.,384.591,1.993),(50.,334.591,1.993)],
@@ -119,6 +159,7 @@ class Tests(unittest.TestCase):
                       Rotation=lambda yaw:obj(yaw=yaw,pitch=0,roll=0),
                       Transform=lambda l,r:obj(location=l,rotation=r),
                       LaneType=obj(Driving='driving'))
+    # Helper routine: make pair; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def make_pair(self, vx=0., wheel=(0.,0.)):
         ego=Actor(10,'vehicle.tesla.model3',pose(384.620,-1.993),vel=obj(x=vx,y=0.,z=0.))
         ego.steer=wheel
@@ -126,131 +167,207 @@ class Tests(unittest.TestCase):
                   bbox=BBox(0.,0.,.293,.172,.172,.293))
         return ego,obs,FakeSnapshot([ego,obs])
 
+    # Test method: verifies coordinate mirror without changing the behavior under test.
     def test_coordinate_mirror(self):
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(m.cr_from_carla(3,-4),(3.,4.))
+    # Test method: verifies yaw mirror without changing the behavior under test.
     def test_yaw_mirror(self):
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(abs(m.heading_cr_from_carla(-180)),math.pi)
+    # Test method: verifies body center uses local box center without changing the behavior under test.
     def test_body_center_uses_local_box_center(self):
         t=pose(10.,1.,yaw=90.)
         x,y=m.body_center_carla(t,obj(x=.2,y=0.))
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(x,10)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(y,1.2)
+    # Test method: verifies inverse body center correction without changing the behavior under test.
     def test_inverse_body_center_correction(self):
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for yaw in [-180,0,45,90]:
             lx=obj(x=.2,y=-.3)
             x,y=m.actor_origin_for_body_center(20,3,yaw,lx)
             a,b=m.body_center_carla(pose(x,y,yaw=yaw),lx)
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertAlmostEqual(a,20)
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertAlmostEqual(b,3)
+    # Test method: verifies route projection westbound right negative without changing the behavior under test.
     def test_route_projection_westbound_right_negative(self):
         p=m.project_polyline(self.context['route'],363.591,4.393)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(p['station_m'],21,places=4)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(p['signed_lateral_offset_m'],-2.4,places=4)
+    # Test method: verifies route projection outside endpoint without changing the behavior under test.
     def test_route_projection_outside_endpoint(self):
         p=m.project_polyline(self.context['route'],390,1.993)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(p['station_m'],0)
+    # Test method: verifies bbox world using pose without changing the behavior under test.
     def test_bbox_world_using_pose(self):
         bbox=m.bbox_world(Actor(1,'static.prop.x',pose(3,4),BBox(0,0,0,1,2,3)),pose(3,4))
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(bbox['bounds_carla_xyz_m']['xmin'],2)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(bbox['dimensions_world_aabb_m'][1],4)
+    # Test method: verifies missing snapshot actor fails without changing the behavior under test.
     def test_missing_snapshot_actor_fails(self):
         ego,_,_=self.make_pair()
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(RuntimeError):m.snapshot_actor(FakeSnapshot([]),ego)
+    # Test method: verifies nominal observation pose and speed flag without changing the behavior under test.
     def test_nominal_observation_pose_and_speed_flag(self):
         ego,obs,snap=self.make_pair()
         report=m.build_observation(snap,ego,obs,self.carla,self.context)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['snapshot']['frame'],12)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(report['checks']['ego_pose_matches_nominal_start'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(report['checks']['obstacle_center_matches_offline_location'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(report['checks']['forward_speed_within_planner_bounds'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(report['planner_initial_state_candidate']['ready_for_live_replanning'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(report['planner_initial_state_candidate']['rear_axle_x_cr_m'],385.941,places=2)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertIn('forward_speed_within_planner_bounds',
                       report['planner_initial_state_candidate']['not_ready_reasons'])
+    # Test method: verifies moving speed candidate still not ready without changing the behavior under test.
     def test_moving_speed_candidate_still_not_ready(self):
         ego,obs,snap=self.make_pair(vx=-6.)
         r=m.build_observation(snap,ego,obs,self.carla,self.context)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(r['ego']['longitudinal_speed_mps'],6)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(r['checks']['forward_speed_within_planner_bounds'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(r['planner_initial_state_candidate']['ready_for_live_replanning'])
+    # Test method: verifies steering nonzero unverified without changing the behavior under test.
     def test_steering_nonzero_unverified(self):
         ego,obs,snap=self.make_pair(wheel=(5,5))
         r=m.build_observation(snap,ego,obs,self.carla,self.context)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertIsNone(r['planner_initial_state_candidate']['steer_rad'])
+    # Test method: verifies obstacle mismatch flag without changing the behavior under test.
     def test_obstacle_mismatch_flag(self):
         ego,obs,snap=self.make_pair()
         obs.pose.location.x+=1
         r=m.build_observation(snap,ego,obs,self.carla,self.context)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(r['checks']['obstacle_center_matches_offline_location'])
+    # Test method: verifies actor types enforced without changing the behavior under test.
     def test_actor_types_enforced(self):
         ego,obs,snap=self.make_pair()
         obs.type_id='vehicle.something'
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):m.build_observation(snap,ego,obs,self.carla,self.context)
+    # Test method: verifies actor ids distinct without changing the behavior under test.
     def test_actor_ids_distinct(self):
         ego,obs,snap=self.make_pair()
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):m.build_observation(snap,ego,ego,self.carla,self.context)
+    # Test method: verifies observe existing is read only without changing the behavior under test.
     def test_observe_existing_is_read_only(self):
         ego,obs,snap=self.make_pair()
+        # Test class World: groups related setup, helpers, and assertions behind one fixture lifecycle.
         class World:
+            # Helper routine: get actor; exposes a focused operation or synthetic fixture while keeping test intent readable.
             def get_actor(self,ident):return {10:ego,11:obs}.get(ident)
+            # Helper routine: get snapshot; exposes a focused operation or synthetic fixture while keeping test intent readable.
             def get_snapshot(self):return snap
         args=obj(ego_id=10,obstacle_id=11)
         r=m.capture_existing(args,self.context,self.carla,World(),{'world_synchronous':True})
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(r['owned_actor_ids'],[])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(r['client_world_ticks'],0)
+    # Test method: verifies mock spawn snapshot and cleanup without changing the behavior under test.
     def test_mock_spawn_snapshot_and_cleanup(self):
         world=FakeWorld()
         bps=(obj(id='vehicle.tesla.model3'),obj(id='static.prop.constructioncone'))
         args=obj(confirm_spawn=True,ego_z_offset=.5,timeout=1.)
         info={'world_synchronous':False,'existing_vehicle_count':0}
         r=m.spawn_capture(args,self.context,self.carla,world,obj(transform=pose(384.591,-1.993,0)),info,bps)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(r['cleanup_ok'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(world.tick_calls,0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(all(a.destroyed for a in world.actors))
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertLess(r['errors_vs_offline']['obstacle_center_position_m'],.01)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(r['observation_mode'],'temporary_spawn_passive_snapshot')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(r['checks']['forward_speed_within_planner_bounds'])
+    # Test method: verifies mock spawn failure cleans ego without changing the behavior under test.
     def test_mock_spawn_failure_cleans_ego(self):
         world=FakeWorld();world.can_spawn_prop=False
         args=obj(confirm_spawn=True,ego_z_offset=.5,timeout=1.)
         info={'world_synchronous':False,'existing_vehicle_count':0}
         bps=(obj(id='vehicle.tesla.model3'),obj(id='static.prop.constructioncone'))
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(RuntimeError):
             m.spawn_capture(args,self.context,self.carla,world,obj(transform=pose(384.591,-1.993,0)),info,bps)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(world.actors[0].destroyed)
+    # Test method: verifies no spawn in sync or occupied world without changing the behavior under test.
     def test_no_spawn_in_sync_or_occupied_world(self):
         world=FakeWorld();args=obj(confirm_spawn=True,ego_z_offset=.5,timeout=1.)
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for info in ({'world_synchronous':True,'existing_vehicle_count':0},
                      {'world_synchronous':False,'existing_vehicle_count':1}):
+            # Context/exception scope: install the temporary mock or exception guard needed only for this check.
             with self.assertRaises(RuntimeError):
                 m.spawn_capture(args,self.context,self.carla,world,obj(transform=pose(0,0,0)),info,
                                 (obj(id='vehicle.x'),obj(id='static.prop.x')))
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(world.actors,[])
+    # Test method: verifies json serialization and overwrite independent without changing the behavior under test.
     def test_json_serialization_and_overwrite_independent(self):
         ego,obs,snap=self.make_pair()
         report=m.build_observation(snap,ego,obs,self.carla,self.context)
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with tempfile.TemporaryDirectory() as d:
             p=m.save_json(Path(d)/'observation.json',report)
             loaded=json.loads(p.read_text())
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertEqual(loaded['snapshot']['frame'],12)
+    # Test method: verifies offline first reference speed validation without changing the behavior under test.
     def test_offline_first_reference_speed_validation(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'ref.csv';p.write_text('t_s,speed_mps\n0,6\n0.1,7\n')
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertEqual(m.first_reference_speed(p),6.)
             p.write_text('t_s,speed_mps\n1,6\n')
+            # Context/exception scope: install the temporary mock or exception guard needed only for this check.
             with self.assertRaises(ValueError):m.first_reference_speed(p)
+    # Test method: verifies nonfinite rejected without changing the behavior under test.
     def test_nonfinite_rejected(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):m.finite('bad',float('nan'))
+    # Test method: verifies degenerate route rejected without changing the behavior under test.
     def test_degenerate_route_rejected(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):m.project_polyline([(0,1,2),(0,1,2)],2,3)
 
+    # Test method: verifies offline provenance integration without changing the behavior under test.
     def test_offline_provenance_integration(self):
+        # Import dependency: csv supplies types or behavior used by this test module.
         import csv,hashlib
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
             route=root/'route.csv'
             route.write_text('x_m,y_m\n384.591,1.993\n334.591,1.993\n')
             safety=root/'safety.csv'; corridor=root/'corridor.csv'
+            # Repeated scenario: exercise the related states independently and retain each assertion result.
             for p in (safety,corridor):
                 p.write_text('t_s,x_m,y_m,yaw_rad,speed_mps\n0,384.591,1.993,3.141592653589793,6\n')
             summary=root/'summary.json'
@@ -262,16 +379,23 @@ class Tests(unittest.TestCase):
                  'settings':settings,'obstacle_xy_m':[363.591,4.393]}
             summary.write_text(json.dumps(doc))
             ctx=m.offline_context(summary,route,safety,corridor)
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertAlmostEqual(ctx['nominal_speed_mps'],6)
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertAlmostEqual(ctx['plan']['obstacle_model']['commonroad_xy_m'][1],4.393)
             doc['route_sha256']='wrong'
             summary.write_text(json.dumps(doc))
+            # Context/exception scope: install the temporary mock or exception guard needed only for this check.
             with self.assertRaises(ValueError):m.offline_context(summary,route,safety,corridor)
 
+    # Test method: verifies rejects unexpected actor ids in offline mode without changing the behavior under test.
     def test_rejects_unexpected_actor_ids_in_offline_mode(self):
         # Argument errors occur before any source file is read or CARLA is connected.
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(SystemExit) as e:
             m.main(['--ego-id','10'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(e.exception.code,2)
 
+# Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
 if __name__=='__main__':unittest.main(verbosity=2)

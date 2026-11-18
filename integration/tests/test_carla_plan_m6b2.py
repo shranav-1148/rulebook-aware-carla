@@ -4,20 +4,32 @@ When the earlier project's geometry helper files are absent from a standalone
 archive, the tests supply minimal stubs for those import-only dependencies.
 The actual town01_bicycle_graph.py (RK4, beam, ranking) is always imported.
 """
+# Import dependency: __future__ supplies types or behavior used by this test module.
 from __future__ import annotations
+# Import dependency: copy supplies types or behavior used by this test module.
 import copy
+# Import dependency: dataclasses supplies types or behavior used by this test module.
 from dataclasses import asdict
+# Import dependency: importlib.util supplies types or behavior used by this test module.
 import importlib.util
+# Import dependency: math supplies types or behavior used by this test module.
 import math
+# Import dependency: sys supplies types or behavior used by this test module.
 import sys
+# Import dependency: types supplies types or behavior used by this test module.
 import types
+# Import dependency: unittest supplies types or behavior used by this test module.
 import unittest
 
+# Import dependency: shapely.affinity supplies types or behavior used by this test module.
 from shapely.affinity import rotate, translate
+# Import dependency: shapely.geometry supplies types or behavior used by this test module.
 from shapely.geometry import Point, box
 
+# Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
 if importlib.util.find_spec('town01_motion_graph') is None:
     s = types.ModuleType('town01_motion_graph')
+    # Helper routine: pose at; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def pose_at(route, station):
         a,b=route[0],route[-1]
         t=station/b[0]
@@ -27,8 +39,10 @@ if importlib.util.find_spec('town01_motion_graph') is None:
     s.read_route_csv=lambda *_: None
     s.synthetic_route=lambda: None
     sys.modules['town01_motion_graph']=s
+# Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
 if importlib.util.find_spec('town01_feasibility_check') is None:
     s=types.ModuleType('town01_feasibility_check')
+    # Helper routine: vehicle rectangle; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def vehicle_rectangle(cx,cy,yaw,length,width):
         return translate(rotate(box(-length/2,-width/2,length/2,width/2),
                                 math.degrees(yaw),origin=(0,0)),xoff=cx,yoff=cy)
@@ -36,10 +50,13 @@ if importlib.util.find_spec('town01_feasibility_check') is None:
     s.load_town01_road=lambda *_: None
     sys.modules['town01_feasibility_check']=s
 
+# Import dependency: town01_bicycle_graph supplies types or behavior used by this test module.
 import town01_bicycle_graph as original
+# Import dependency: carla_plan_m6b2 supplies types or behavior used by this test module.
 import carla_plan_m6b2 as b
 
 
+# Helper routine: observation; exposes a focused operation or synthetic fixture while keeping test intent readable.
 def observation():
     x, y=384.591, 1.993
     theta=math.pi
@@ -65,54 +82,80 @@ def observation():
             'observation_mode':'temporary_spawn_passive_snapshot', 'cleanup_ok':True}
 
 
+# Test class Milestone6B2Tests: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class Milestone6B2Tests(unittest.TestCase):
     @classmethod
+    # Helper routine: setUpClass; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def setUpClass(cls):
         cls.route=[(0.,384.591,1.993),(60.,324.591,1.993)]
         cls.road=box(310.,-2.,395.,7.)
         cls.summary={'settings':asdict(original.Config()), 'experiment':'Milestone 4E-B'}
         cls.summary['settings']['beam_width']=25
 
+    # Helper routine: config; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def config(self, **options):
         return b.configuration_from_summary(self.summary,**options)
 
+    # Test method: verifies speed zero enabled without modifying previous planner without changing the behavior under test.
     def test_speed_zero_enabled_without_modifying_previous_planner(self):
         cfg=self.config()
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(cfg.speed_min_mps,0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(original.Config().speed_min_mps,5)
 
+    # Test method: verifies root is observed rear axle not route start constructor without changing the behavior under test.
     def test_root_is_observed_rear_axle_not_route_start_constructor(self):
         obs=observation();cfg=self.config()
         q,issues=b.observed_vehicle(obs,cfg)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(q.v,0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(q.x,385.941)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(original.body_center(q,cfg)[0],384.591)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(any('vertically settled' in s for s in issues))
 
+    # Test method: verifies real ego dimensions not older 4p5x1p9 without changing the behavior under test.
     def test_real_ego_dimensions_not_older_4p5x1p9(self):
         cfg,raw,hard=b.measured_geometry(observation(),self.config())
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(cfg.length_m,4.7917796)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(cfg.width_m,2.16345)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertGreater(hard.area,raw.area)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(raw.area,(2*.17203)**2,places=5)
 
+    # Test method: verifies unstable frame blocks default run and does not fabricate speed without changing the behavior under test.
     def test_unstable_frame_blocks_default_run_and_does_not_fabricate_speed(self):
         report,paths=b.run_offline(observation(),self.summary,self.route,self.road)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['status'],'blocked_unstable_observation')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertIsNone(paths)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['start_state']['v'],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(report['ready_for_live_control'])
 
+    # Test method: verifies nonzero steering rejected until calibration without changing the behavior under test.
     def test_nonzero_steering_rejected_until_calibration(self):
         obs=observation();obs['ego']['front_wheel_physics_angles_carla_deg']=[4.,4.]
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError,'near-zero'):
             b.observed_vehicle(obs,self.config())
 
+    # Test method: verifies candidate speed must match observed speed without changing the behavior under test.
     def test_candidate_speed_must_match_observed_speed(self):
         obs=observation();obs['planner_initial_state_candidate']['forward_speed_mps']=6.
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError,'differs'):
             b.observed_vehicle(obs,self.config())
 
+    # Test method: verifies initial state collision rejected without changing the behavior under test.
     def test_initial_state_collision_rejected(self):
         obs=observation()
         cx,cy=384.591,1.993
@@ -121,68 +164,97 @@ class Milestone6B2Tests(unittest.TestCase):
         obs['obstacle']['bbox']['vertices_commonroad_xy_m']=[list(p) for p in pts for _ in (0,1)]
         cfg,raw,hard=b.measured_geometry(obs,self.config())
         q,_=b.observed_vehicle(obs,cfg)
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError,'hard_obstacle_collision'):
             b.build_observed_motion_tree(self.route,self.road,cfg,q,hard)
 
+    # Test method: verifies zero speed short primitive is possible without changing the behavior under test.
     def test_zero_speed_short_primitive_is_possible(self):
         obs=observation()
         cfg,raw,hard=b.measured_geometry(obs,self.config())
         q,_=b.observed_vehicle(obs,cfg)
         nodes,terminals,layers,rejects=b.build_observed_motion_tree(
             self.route,self.road,b.configuration_from_summary(self.summary,horizon_steps=1,beam_width=20),q,hard)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(any(node.state.v>0 for node in terminals))
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(nodes[0].state.v,0.)
 
+    # Test method: verifies offline override generates search but not live ready without changing the behavior under test.
     def test_offline_override_generates_search_but_not_live_ready(self):
         report,selected=b.run_offline(observation(),self.summary,self.route,self.road,
                                       horizon_steps=2,beam_width=25,min_progress_m=.2,
                                       allow_unstable_offline=True)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['status'],'offline_plan_generated_unstable_input')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(report['ready_for_live_control'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(report['offline_unstable_override_used'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['start_state']['v'],0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(set(selected),{'safety_first','corridor_first'})
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for profile, data in selected.items():
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertTrue(data['diagnostic']['sampled_road_pass'])
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertTrue(data['diagnostic']['sampled_hard_obstacle_pass'])
 
+    # Test method: verifies observed lateral motion rejected without changing the behavior under test.
     def test_observed_lateral_motion_rejected(self):
         obs=observation();obs['ego']['lateral_speed_mps']=1.0
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError,'lateral'):
             b.observed_vehicle(obs,self.config())
 
+    # Test method: verifies bad obstacle box rejected without changing the behavior under test.
     def test_bad_obstacle_box_rejected(self):
         obs=observation();obs['obstacle']['bbox']['vertices_commonroad_xy_m']=[[1,1]]*8
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError,'degenerate'):
             b.measured_geometry(obs,self.config())
 
+    # Test method: verifies speed range prevents negative reverse and overspeed without changing the behavior under test.
     def test_speed_range_prevents_negative_reverse_and_overspeed(self):
         obs=observation()
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for value in (-1, 9):
             o=copy.deepcopy(obs)
             o['planner_initial_state_candidate']['forward_speed_mps']=value
+            # Context/exception scope: install the temporary mock or exception guard needed only for this check.
             with self.assertRaises(ValueError):
                 b.observed_vehicle(o,self.config())
 
+    # Test method: verifies stable input can plan without override but stays offline without changing the behavior under test.
     def test_stable_input_can_plan_without_override_but_stays_offline(self):
         obs=observation()
         obs['ego']['velocity_carla_xyz_mps'][2]=0.
         report,paths=b.run_offline(obs,self.summary,self.route,self.road,
                                    horizon_steps=2,beam_width=25,min_progress_m=.2)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['status'],'offline_plan_generated')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(report['ready_for_live_control'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(paths)
 
+    # Test method: verifies infeasible observed footprint returns failure report without changing the behavior under test.
     def test_infeasible_observed_footprint_returns_failure_report(self):
         obs=observation()
         obs['ego']['velocity_carla_xyz_mps'][2]=0.
         skinny_road=box(310.,1.0,395.,2.5)
         report,paths=b.run_offline(obs,self.summary,self.route,skinny_road,
                                    horizon_steps=2,beam_width=20,min_progress_m=.2)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['status'],'offline_planning_failed')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertIn('road_footprint',report['explanation'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertIsNone(paths)
 
+    # Test method: verifies cross experiment obstacle provenance rejected without changing the behavior under test.
     def test_cross_experiment_obstacle_provenance_rejected(self):
         obs=observation()
         obs['offline_obstacle']={'commonroad_xy_m':[363.592,4.405]}
@@ -190,16 +262,21 @@ class Milestone6B2Tests(unittest.TestCase):
         summary['obstacle_xy_m']=[363.592,4.405]
         b.verify_observation_scenario(obs,summary)
         summary['obstacle_xy_m']=[111.,222.]
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError,'mixed experiments'):
             b.verify_observation_scenario(obs,summary)
 
+    # Test method: verifies preserves priority order for terminal candidates without changing the behavior under test.
     def test_preserves_priority_order_for_terminal_candidates(self):
         a=original.Node(1,1,original.Vehicle(0,0,0,0,0),0,None,1,0,0,(0,1,0),[])
         z=original.Node(2,1,original.Vehicle(0,0,0,0,0),0,None,1,0,0,(1,0,0),[])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertLess(original.rank(a,'safety_first',0),original.rank(z,'safety_first',0))
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertLess(original.rank(z,'corridor_first',0),original.rank(a,'corridor_first',0))
 
 
+    # Helper routine: verified settled observation; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def verified_settled_observation(self, speed=-0.00003):
         obs = observation()
         obs['ego']['velocity_carla_xyz_mps'] = [-speed, 0.0, 0.001]
@@ -214,47 +291,67 @@ class Milestone6B2Tests(unittest.TestCase):
                        'ego_vertical_speed_mps': 0.001}}
         return obs
 
+    # Test method: verifies verified settled negative residual is zero model speed without changing the behavior under test.
     def test_verified_settled_negative_residual_is_zero_model_speed(self):
         obs = self.verified_settled_observation()
         q, issues = b.observed_vehicle(obs, self.config())
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(q.v, 0.0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(obs['ego']['longitudinal_speed_mps'], -0.00003)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(any('vertically settled' in issue for issue in issues))
 
+    # Test method: verifies verified settled negative residual runs without override without changing the behavior under test.
     def test_verified_settled_negative_residual_runs_without_override(self):
         obs = self.verified_settled_observation()
         report, paths = b.run_offline(obs, self.summary, self.route, self.road,
                                       horizon_steps=2, beam_width=25, min_progress_m=0.2)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['status'], 'offline_plan_generated')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(report['stationary_negative_speed_normalized_to_zero'])
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['raw_observed_forward_speed_mps'], -0.00003)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(report['start_state']['v'], 0.0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(paths)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertFalse(report['ready_for_live_control'])
 
+    # Test method: verifies negative residual without settle evidence rejected without changing the behavior under test.
     def test_negative_residual_without_settle_evidence_rejected(self):
         obs = observation()
         obs['ego']['longitudinal_speed_mps'] = -0.00003
         obs['planner_initial_state_candidate']['forward_speed_mps'] = -0.00003
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError, 'outside the supported'):
             b.observed_vehicle(obs, self.config())
 
+    # Test method: verifies meaningful reverse motion still rejected without changing the behavior under test.
     def test_meaningful_reverse_motion_still_rejected(self):
         obs = self.verified_settled_observation(-0.08)
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError, 'outside the supported'):
             b.observed_vehicle(obs, self.config())
 
+    # Test method: verifies failed stability evidence rejects negative residual without changing the behavior under test.
     def test_failed_stability_evidence_rejects_negative_residual(self):
         obs = self.verified_settled_observation(-0.00003)
         obs['stability']['latest']['accepted'] = False
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError, 'outside the supported'):
             b.observed_vehicle(obs, self.config())
 
+    # Test method: verifies raw measurement candidate mismatch still rejected without changing the behavior under test.
     def test_raw_measurement_candidate_mismatch_still_rejected(self):
         obs = self.verified_settled_observation(-0.00003)
         obs['planner_initial_state_candidate']['forward_speed_mps'] = -0.03
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaisesRegex(ValueError, 'differs from CARLA'):
             b.observed_vehicle(obs, self.config())
 
+# Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
 if __name__=='__main__':
     unittest.main(verbosity=2)

@@ -14,8 +14,12 @@ import json
 import math
 from pathlib import Path
 
+# Provides CARLA lifecycle, sampling, control, and persistence operations.
 import carla_calibrate_m6b3 as b
-from carla_model_m6b4 import read_trial, model_for_tracking, finite, DT, wrap, digest
+# Model-specific validation remains available from the model module; common
+# primitives come from the shared implementation.
+from carla_model_m6b4 import read_trial, model_for_tracking
+from carla_m6b_common import finite, DT, wrap, digest
 
 HERE=Path(__file__).resolve().parent
 DEFAULT_OBS=HERE/'output/carla_observation_6b2_stable/trial_003/live_observation.json'
@@ -257,6 +261,7 @@ def execute(args,obs,reference,model):
         reason='interrupted by user'
     except Exception as exc:
         reason=type(exc).__name__+': '+str(exc)
+    # Cleanup path: always execute this block after the guarded operation to close resources or restore state.
     finally:
         if ego is not None:
             try:

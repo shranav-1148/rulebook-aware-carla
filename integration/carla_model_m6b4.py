@@ -4,39 +4,34 @@ No CARLA import, no vehicle control. Does not modify upstream CommonRoad source.
 """
 from __future__ import annotations
 
+# ``argparse`` exposes the offline model-generation command line interface.
 import argparse
+# ``csv`` reads the recorded calibration telemetry.
 import csv
-import hashlib
+# ``json`` loads source reports and writes the fitted model document.
 import json
+# ``math`` supplies trigonometry and finite-value checks for the model.
 import math
+# ``Path`` provides explicit filesystem operations for source and output files.
 from pathlib import Path
+# ``mean`` aggregates wheel-angle gains and diagnostic errors.
 from statistics import mean
 
-DT = 0.05
+# Re-export the shared primitives under their historical names so existing
+# callers and tests continue importing them from this module unchanged.
+from carla_m6b_common import DT, digest, finite, wrap
+
 VERSION = 'm6b4-provisional-steering-v1'
 
 
-def finite(name, v):
-    try:
-        n = float(v)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f'{name} is not numeric') from exc
-    if not math.isfinite(n):
-        raise ValueError(f'{name} is not finite')
-    return n
-
-
-def wrap(a):
-    return math.atan2(math.sin(a), math.cos(a))
-
-
-def digest(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
 def read_trial(summary_path, samples_path, expected_sign):
+    """Load and validate one completed manual first-gear calibration trial."""
+    # Normalize both paths before reading so callers may provide strings or
+    # ``Path`` objects without changing the validation path.
     summary_path, samples_path = Path(summary_path), Path(samples_path)
+    # The summary is the authoritative run-level safety and provenance record.
     summary = json.loads(summary_path.read_text(encoding='utf-8'))
+    # Only completed, collision-free, cleaned-up trials can calibrate steering.
     if (summary.get('status') != 'completed' or summary.get('mode') != 'manual_steering'
             or summary.get('collision_count') != 0 or summary.get('cleanup_ok') is not True
             or summary.get('settings_restored') is not True
@@ -55,8 +50,10 @@ def read_trial(summary_path, samples_path, expected_sign):
         raise ValueError('Missing source observation hash')
     if finite('max speed',summary['max_total_speed_mps']) > 3.5 or finite('final speed',summary['final_forward_speed_mps']) > .15:
         raise ValueError('Unsafe reference motion')
+    # CSV rows contain the per-frame measurements used by the kinematic audit.
     with samples_path.open(newline='',encoding='utf-8') as f:
         rows=list(csv.DictReader(f))
+    # The calibration protocol is exactly 85 samples long.
     if len(rows)!=85 or summary['samples']!=len(rows):
         raise ValueError('Reference requires all 85 samples')
     required = ('frame','t_s','t_sim_s','x_cr_m','y_cr_m','yaw_cr_rad','forward_speed_mps',
@@ -65,6 +62,8 @@ def read_trial(summary_path, samples_path, expected_sign):
                 'phase','applied_gear','applied_manual_gear_shift','applied_hand_brake','applied_reverse')
     if not all(k in rows[0] for k in required):
         raise ValueError('Incomplete reference CSV schema')
+    # Validate timing, numeric fields, continuity, and the manually applied
+    # first-gear control schedule before any model arithmetic uses the data.
     for i,r in enumerate(rows):
         t=finite('time',r['t_s'])
         if abs(t-i*DT)>1.e-4:
@@ -103,6 +102,7 @@ def read_trial(summary_path, samples_path, expected_sign):
 
 def reference_command(i):
     """Validated 6B-3 schedule; steering is unsigned before sign is applied."""
+    # The index maps to the fixed 0.05-second calibration timeline.
     if not 1 <= i <= 84:
         raise ValueError('Reference index outside 1..84')
     t=(i-1)*DT
@@ -117,10 +117,12 @@ def command_model_residuals(rows, gain_deg_per_norm, wheelbase_m, steering_sign=
 
     command_shift +/-1 is a sensitivity comparison, not measured system latency.
     """
+    # At least one integration interval is required to produce a residual.
     if len(rows) < 2: raise ValueError('Insufficient samples')
     x=finite('x0',rows[0]['x_cr_m']); y=finite('y0',rows[0]['y_cr_m'])
     yaw=finite('yaw0',rows[0]['yaw_cr_rad'])
     position_err=[];heading_err=[]
+    # Integrate the kinematic bicycle model and compare it with measured poses.
     for i in range(1,len(rows)):
         previous,current=rows[i-1],rows[i]
         dt=finite('time',current['t_s'])-finite('prev time',previous['t_s'])
@@ -141,6 +143,9 @@ def command_model_residuals(rows, gain_deg_per_norm, wheelbase_m, steering_sign=
 
 
 def estimate_model(positive, negative):
+    """Estimate a provisional steering gain from opposite-sign trials."""
+    # Paired trials must describe the same stable observation but remain
+    # physically distinct experiments.
     ps,ns=positive['summary'],negative['summary']
     if ps['observation_sha256']!=ns['observation_sha256']:
         raise ValueError('Steering trials do not share the same stable observation')
@@ -153,6 +158,7 @@ def estimate_model(positive, negative):
     wheelbases=[finite('wheelbase',v['wheelbase_from_xy_m']) for v in (lp,ln)]
     if max(wheelbases)-min(wheelbases)>.01 or not all(2.5<w<3.5 for w in wheelbases):
         raise ValueError('Inconsistent or implausible axle geometry')
+    # Only the deliberate steering-pulse rows identify wheel-angle response.
     pulse = [(r,sign) for trial,sign in ((positive,1),(negative,-1))
              for r in trial['rows'] if r['phase']=='steer_pulse']
     angles=[.5*(finite('FL',r['wheel_front_left_deg'])+finite('FR',r['wheel_front_right_deg'])) for r,_ in pulse]
@@ -162,6 +168,7 @@ def estimate_model(positive, negative):
     gain=mean(gains)
     if not 40<gain<90:
         raise ValueError('Wheel steering response outside conservative observed range')
+    # Preserve timing diagnostics even though the telemetry is not frame-locked.
     timing={}
     for trial,label in ((positive,'positive'),(negative,'negative')):
         rows=trial['rows']; elapsed=[finite('sim time',r['t_sim_s']) for r in rows]
@@ -202,6 +209,9 @@ def estimate_model(positive, negative):
 
 
 def model_for_tracking(path, observation_hash, reference_sha, reference_summary_sha):
+    """Validate that a stored model matches the tracking source artifacts."""
+    # Tracking must not silently use a model fitted from another observation or
+    # another positive calibration CSV.
     model=json.loads(Path(path).read_text(encoding='utf-8'))
     if (model.get('schema_version')!=VERSION or model.get('status')!='provisional_offline_fit' or
         model.get('observation_sha256')!=observation_hash or model.get('manual_gear')!=1 or
@@ -217,6 +227,8 @@ def model_for_tracking(path, observation_hash, reference_sha, reference_summary_
 
 
 def main(argv=None):
+    """Generate one immutable offline steering-model JSON document."""
+    # All inputs are explicit so a model can be reproduced and audited later.
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--positive-summary',type=Path,required=True)
     p.add_argument('--positive-samples',type=Path,required=True)

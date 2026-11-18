@@ -1,19 +1,33 @@
 """M6B-6 offline/controller/mock tests. No real CARLA server accessed."""
+# Import dependency: csv supplies types or behavior used by this test module.
 import csv
+# Import dependency: copy supplies types or behavior used by this test module.
 import copy
+# Import dependency: json supplies types or behavior used by this test module.
 import json
+# Import dependency: tempfile supplies types or behavior used by this test module.
 import tempfile
+# Import dependency: unittest supplies types or behavior used by this test module.
 import unittest
+# Import dependency: pathlib supplies types or behavior used by this test module.
 from pathlib import Path
+# Import dependency: types supplies types or behavior used by this test module.
 from types import SimpleNamespace as NS
+# Import dependency: unittest.mock supplies types or behavior used by this test module.
 from unittest.mock import patch
+# Import dependency: carla_speed_fit_m6b6 supplies types or behavior used by this test module.
 import carla_speed_fit_m6b6 as fit
+# Import dependency: carla_speed_track_m6b6 supplies types or behavior used by this test module.
 import carla_speed_track_m6b6 as tr
+# Import dependency: carla_route_reference_m6b5 supplies types or behavior used by this test module.
 import carla_route_reference_m6b5 as ref
+# Import dependency: test_carla_m6b5 supplies types or behavior used by this test module.
 import test_carla_m6b5 as base_tests
+# Import dependency: test_carla_m6b4 supplies types or behavior used by this test module.
 from test_carla_m6b4 import FakeWorld, FakeCarla, FakeBlueprint
 
 
+# Helper routine: source fixture; exposes a focused operation or synthetic fixture while keeping test intent readable.
 def source_fixture(directory,sign):
     d=Path(directory)
     s=d/('source_positive' if sign==1 else 'source_negative');s.mkdir()
@@ -25,13 +39,19 @@ def source_fixture(directory,sign):
     sp=s/'summary.json';sp.write_text(json.dumps(summary))
     path=s/'calibration_samples.csv'
     rows=[];v=0.0
+    # Repeated scenario: exercise the related states independently and retain each assertion result.
     for j in range(85):
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         if j==0: phase,th,br='initial',0.,0.
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         elif j<=22:phase,th,br='throttle_straight',.25,0.
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         elif j<=36:phase,th,br='steer_pulse',.2,0.
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         elif j<=44:phase,th,br='neutralize',0.,0.
         else:phase,th,br='brake',0.,.65
         # Fixture has multiple brake-speed samples and a stopped endpoint.
+        # Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
         if j:
             a=1.0 if j<=22 else (.6 if j<=36 else (-.3 if j<=44 else -2.5))
             v=max(0.,v+a*.05)
@@ -41,53 +61,82 @@ def source_fixture(directory,sign):
             'applied_manual_gear_shift':'True' if j else 'False',
             'applied_gear':1 if j else 0,
             'command_steer_normalized':sign*.08 if 23<=j<=36 else 0.})
+    # Context/exception scope: install the temporary mock or exception guard needed only for this check.
     with path.open('w',newline='',encoding='utf-8') as f:
         w=csv.DictWriter(f,fieldnames=rows[0]);w.writeheader();w.writerows(rows)
     return sp,path
 
 
+# Test class SpeedFitTest: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class SpeedFitTest(unittest.TestCase):
+    # Fixture lifecycle: create or release the temporary state used only by this test class.
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.d=Path(self.tmp.name)
         self.ps,self.pc=source_fixture(self.d,1)
         self.ns,self.nc=source_fixture(self.d,-1)
+    # Fixture lifecycle: create or release the temporary state used only by this test class.
     def tearDown(self):self.tmp.cleanup()
+    # Helper routine: build; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def build(self):
         return fit.response([fit.read_trial(self.ps,self.pc,1),fit.read_trial(self.ns,self.nc,-1)])
+    # Test method: verifies fit from independent sources without changing the behavior under test.
     def test_fit_from_independent_sources(self):
         r=self.build()
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertGreater(r['phase_response_mps2']['throttle_straight']['median_acceleration_mps2'],0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertLess(r['phase_response_mps2']['brake']['mean_acceleration_mps2'],0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(r['status'],'descriptive_offline_fit')
+    # Test method: verifies no overwrite and validate without changing the behavior under test.
     def test_no_overwrite_and_validate(self):
         p=self.d/'fit.json'
         args=['--positive-summary',str(self.ps),'--positive-samples',str(self.pc),
             '--negative-summary',str(self.ns),'--negative-samples',str(self.nc),
             '--out',str(p)]
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(fit.main(args),0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(fit.main(args),2)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(fit.validate_fit(p,self.ps,self.pc,self.ns,self.nc)['status'],'descriptive_offline_fit')
+    # Test method: verifies tampered fit rejected without changing the behavior under test.
     def test_tampered_fit_rejected(self):
         p=self.d/'fit.json';r=self.build();r['observation_sha256']='tampered';p.write_text(json.dumps(r))
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):fit.validate_fit(p,self.ps,self.pc,self.ns,self.nc)
+    # Test method: verifies negative sign rejected without changing the behavior under test.
     def test_negative_sign_rejected(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):fit.read_trial(self.ps,self.pc,-1)
+    # Test method: verifies duplicate source rejected without changing the behavior under test.
     def test_duplicate_source_rejected(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):fit.response([fit.read_trial(self.ps,self.pc,1)]*2)
+    # Test method: verifies nonconsecutive frames rejected without changing the behavior under test.
     def test_nonconsecutive_frames_rejected(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.nc.open(newline='',encoding='utf-8') as f:r=list(csv.DictReader(f))
         r[30]['frame']='999'
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.nc.open('w',newline='',encoding='utf-8') as f:
             w=csv.DictWriter(f,fieldnames=r[0]);w.writeheader();w.writerows(r)
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):fit.read_trial(self.ns,self.nc,-1)
+    # Test method: verifies wrong gear rejected without changing the behavior under test.
     def test_wrong_gear_rejected(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.nc.open(newline='',encoding='utf-8') as f:r=list(csv.DictReader(f))
         r[23]['applied_gear']='0'
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.nc.open('w',newline='',encoding='utf-8') as f:
             w=csv.DictWriter(f,fieldnames=r[0]);w.writeheader();w.writerows(r)
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):fit.read_trial(self.ns,self.nc,-1)
 
+# Test class SpeedTrackTest: groups related setup, helpers, and assertions behind one fixture lifecycle.
 class SpeedTrackTest(unittest.TestCase):
+    # Fixture lifecycle: create or release the temporary state used only by this test class.
     def setUp(self):
         base_tests.TestM6B5.setUp(self)
         self.fit_doc={'status':'descriptive_offline_fit', 'observation_sha256':self.obs['sha256'],
@@ -95,68 +144,115 @@ class SpeedTrackTest(unittest.TestCase):
         self.fitp=self.dir/'longfit.json';self.fitp.write_text(json.dumps(self.fit_doc))
         self.refp.write_text(json.dumps(self.reference))
         self.reference['_loaded_from']=str(self.refp)
+    # Fixture lifecycle: create or release the temporary state used only by this test class.
     def tearDown(self):base_tests.TestM6B5.tearDown(self)
+    # Helper routine: cmd; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def cmd(self,j=20,last_v=0.3,on=True):
         t=self.reference['samples'][j]
         last={'forward_speed_mps':last_v,'heading_error_deg':0.,'lateral_error_m':0.}
         return tr.command_for_reference(t,last,self.model,self.fit_doc,on)
+    # Test method: verifies control off is identical to 6b5 without changing the behavior under test.
     def test_control_off_is_identical_to_6b5(self):
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for j in range(1,85):
             th,steer,br,ff,_,_,_=self.cmd(j,on=False)
             t=self.reference['samples'][j]
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertAlmostEqual(th,t['command_throttle']);self.assertAlmostEqual(br,t['command_brake'])
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertAlmostEqual(steer,t['feedforward_steer_normalized'])
+    # Test method: verifies no simultaneous throttle brake without changing the behavior under test.
     def test_no_simultaneous_throttle_brake(self):
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for j in range(1,85):
+            # Repeated scenario: exercise the related states independently and retain each assertion result.
             for v in [0,.5,1.5,1.95]:
                 th,steer,br,ff,ct,cb,_=self.cmd(j,v,True)
+                # Observable assertion: compare the resulting value or state with the contract documented by this test.
                 self.assertLessEqual(th,.25+1e-9);self.assertLessEqual(br,.65+1e-9)
+                # Observable assertion: compare the resulting value or state with the contract documented by this test.
                 self.assertGreaterEqual(th,0);self.assertGreaterEqual(br,0)
+                # Observable assertion: compare the resulting value or state with the contract documented by this test.
                 self.assertLessEqual(th*br,1e-10)
+                # Observable assertion: compare the resulting value or state with the contract documented by this test.
                 self.assertLessEqual(abs(ct),.10+1e-9)
+                # Observable assertion: compare the resulting value or state with the contract documented by this test.
                 self.assertLessEqual(abs(cb),.25+1e-9)
+    # Test method: verifies adjusts throttle for overspeed without changing the behavior under test.
     def test_adjusts_throttle_for_overspeed(self):
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertLess(self.cmd(20,1.6,True)[0],self.cmd(20,1.6,False)[0])
+    # Test method: verifies adjusts throttle for underspeed without changing the behavior under test.
     def test_adjusts_throttle_for_underspeed(self):
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertGreater(self.cmd(30,0.,True)[0],self.cmd(30,0.,False)[0])
+    # Test method: verifies reduces brake for underspeed without changing the behavior under test.
     def test_reduces_brake_for_underspeed(self):
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertLess(self.cmd(45,0.,True)[2],self.cmd(45,0.,False)[2])
+    # Test method: verifies coast small overspeed never brakes without changing the behavior under test.
     def test_coast_small_overspeed_never_brakes(self):
         # Real-world regression: at t=1.90, a ~0.001825 brake command
         # corresponded with a 1.047 m/s speed loss in one CARLA tick.
         t=self.cmd(38,1.6051408169903532,True)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[0],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[2],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[5],0.)
+    # Test method: verifies coast large overspeed never brakes without changing the behavior under test.
     def test_coast_large_overspeed_never_brakes(self):
         # No confidence in mapping small normalized brake to deceleration.
         t=self.cmd(40,1.95,True)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[0],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[2],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[5],0.)
+    # Test method: verifies coast underspeed never throttles or brakes without changing the behavior under test.
     def test_coast_underspeed_never_throttles_or_brakes(self):
         t=self.cmd(40,0.5,True)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[0],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[2],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[4],0.)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(t[5],0.)
+    # Test method: verifies never throttles during brake without changing the behavior under test.
     def test_never_throttles_during_brake(self):
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(self.cmd(45,0.,True)[0],0.)
+    # Test method: verifies reject unsafe preceding speed without changing the behavior under test.
     def test_reject_unsafe_preceding_speed(self):
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(RuntimeError):self.cmd(20,3.,True)
+    # Test method: verifies drive requires double confirm without changing the behavior under test.
     def test_drive_requires_double_confirm(self):
+        # Repeated scenario: exercise the related states independently and retain each assertion result.
         for a in (['--execute-track','--speed-feedback','on'], ['--confirm-drive']):
+            # Context/exception scope: install the temporary mock or exception guard needed only for this check.
             with self.assertRaises(SystemExit) as cm:tr.main(a)
+            # Observable assertion: compare the resulting value or state with the contract documented by this test.
             self.assertEqual(cm.exception.code,2)
+    # Test method: verifies speed metrics math without changing the behavior under test.
     def test_speed_metrics_math(self):
         rows=[{'speed_error_mps':.1,'throttle_correction':0.,'brake_correction':.05},
               {'speed_error_mps':-.1,'throttle_correction':.02,'brake_correction':0.}]
         out=tr.speed_metrics(rows)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertAlmostEqual(out['rms_speed_error_mps'],.1)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(out['nonzero_throttle_correction_samples'],1)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(out['nonzero_brake_correction_samples'],1)
+    # Helper routine: run mock; exposes a focused operation or synthetic fixture while keeping test intent readable.
     def run_mock(self,mode='off',stationary=False,collision_at=None,restore_fail=False,measured_v_offset=0):
         world=FakeWorld();world.inject_collision_at=collision_at;world.fail_restore=restore_fail
+        # Helper routine: sample; exposes a focused operation or synthetic fixture while keeping test intent readable.
         def sample(world,actor,carla,bb,expected_frame=None):
             j=0 if stationary else min(world.drive_ticks,84)
             target=self.reference['samples'][j]
@@ -169,55 +265,82 @@ class SpeedTrackTest(unittest.TestCase):
         args=NS(timeout=10.,speed_feedback=mode,out=self.dir/('trial_'+mode),
                 longitudinal_fit=self.fitp,model=self.mp,reference=self.refp)
         wp=NS(location=NS(z=0.))
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with patch('carla_speed_track_m6b6.b.preflight',return_value=(FakeCarla,None,world,FakeBlueprint(),wp,{'mock':True})),\
              patch('carla_speed_track_m6b6.b._get_tick',side_effect=lambda w,timeout_s=None:w.tick()),\
              patch('carla_speed_track_m6b6.b.sample_actor',side_effect=sample):
             rc=tr.execute(args,self.obs,self.model,self.reference,self.geom,self.fit_doc)
         summary=json.loads((args.out/'summary.json').read_text())
         return rc,summary,args.out,world
+    # Test method: verifies mock off completed without changing the behavior under test.
     def test_mock_off_completed(self):
         rc,r,p,w=self.run_mock()
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(rc,0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(r['status'],'completed')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(r['speed_metrics']['nonzero_brake_correction_samples'],0)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertTrue(r['cleanup_ok']);self.assertTrue(r['settings_restored'])
+    # Test method: verifies mock on completed without changing the behavior under test.
     def test_mock_on_completed(self):
         rc,r,p,w=self.run_mock('on',measured_v_offset=-.15)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(rc,0);self.assertEqual(r['status'],'completed')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertGreater(r['speed_metrics']['nonzero_throttle_correction_samples'],0)
+    # Test method: verifies mock collision abort without changing the behavior under test.
     def test_mock_collision_abort(self):
         rc,r,p,w=self.run_mock(collision_at=10)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(rc,2);self.assertEqual(r['collision_count'],1)
+    # Test method: verifies mock stationary abort without changing the behavior under test.
     def test_mock_stationary_abort(self):
         rc,r,p,w=self.run_mock(stationary=True)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(rc,2);self.assertIn('motion',r['abort_reason'])
+    # Test method: verifies mock restore fail without changing the behavior under test.
     def test_mock_restore_fail(self):
         rc,r,p,w=self.run_mock(restore_fail=True)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(rc,2);self.assertEqual(r['status'],'cleanup_or_restore_failed')
+    # Test method: verifies compare and csv audit without changing the behavior under test.
     def test_compare_and_csv_audit(self):
         _,on,op,_=self.run_mock('on',measured_v_offset=-.1)
         _,off,zp,_=self.run_mock('off',measured_v_offset=-.1)
         result=tr.compare(op/'summary.json',zp/'summary.json',self.dir/'comparison.json',self.reference)
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(result['status'],'comparison_complete')
+        # Observable assertion: compare the resulting value or state with the contract documented by this test.
         self.assertEqual(result['conclusion'],'speed_feedback_improvement_not_demonstrated')
+    # Test method: verifies compare rejects control corruption without changing the behavior under test.
     def test_compare_rejects_control_corruption(self):
         _,on,op,_=self.run_mock('on',measured_v_offset=-.1)
         _,off,zp,_=self.run_mock('off',measured_v_offset=-.1)
         p=zp/'calibration_samples.csv'
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with p.open(newline='',encoding='utf-8') as f:rows=list(csv.DictReader(f))
         rows[20]['command_throttle']='0.12'
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with p.open('w',newline='',encoding='utf-8') as f:
             w=csv.DictWriter(f,fieldnames=rows[0]);w.writeheader();w.writerows(rows)
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):tr.compare(op/'summary.json',zp/'summary.json',self.dir/'pair.json',self.reference)
+    # Test method: verifies compare rejects mismatched hash without changing the behavior under test.
     def test_compare_rejects_mismatched_hash(self):
         _,on,op,_=self.run_mock('on')
         _,off,zp,_=self.run_mock('off')
         rpath=zp/'summary.json';d=json.loads(rpath.read_text());d['model_sha256']='wrong';rpath.write_text(json.dumps(d))
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):tr.compare(op/'summary.json',rpath,self.dir/'pair.json',self.reference)
+    # Test method: verifies compare rejects failed run without changing the behavior under test.
     def test_compare_rejects_failed_run(self):
         _,on,op,_=self.run_mock('on')
         _,off,zp,_=self.run_mock('off')
         rpath=op/'summary.json';d=json.loads(rpath.read_text());d['status']='aborted';rpath.write_text(json.dumps(d))
+        # Context/exception scope: install the temporary mock or exception guard needed only for this check.
         with self.assertRaises(ValueError):tr.compare(rpath,zp/'summary.json',self.dir/'pair.json',self.reference)
 
+# Conditional branch: distinguish the expected state or exceptional edge before continuing validation.
 if __name__=='__main__':unittest.main()

@@ -10,8 +10,12 @@ import json
 import math
 from pathlib import Path
 
+# Calibration supplies stable-observation loading without importing CARLA here.
 import carla_calibrate_m6b3 as b
-from carla_model_m6b4 import DT, VERSION, digest, finite, wrap
+# The model module retains the public milestone version; common primitives are
+# imported from their shared implementation to prevent duplicate definitions.
+from carla_model_m6b4 import VERSION
+from carla_m6b_common import DT, digest, finite, wrap
 
 HERE=Path(__file__).resolve().parent
 DEFAULT_OBS=HERE/'output/carla_observation_6b2_stable/trial_003/live_observation.json'

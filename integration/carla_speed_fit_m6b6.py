@@ -11,7 +11,8 @@ import json
 import math
 from pathlib import Path
 from statistics import median, mean
-from carla_model_m6b4 import digest, finite, DT
+# Shared timing, numeric, and provenance primitives.
+from carla_m6b_common import digest, finite, DT
 
 HERE=Path(__file__).resolve().parent
 POS=HERE/'output/carla_calibration_6b3/manual_steering_pos_001'

@@ -10,7 +10,10 @@ import json
 import math
 from pathlib import Path
 
-from carla_model_m6b4 import DT, digest, finite, model_for_tracking, read_trial, wrap
+# Shared model validation and provenance helpers; model_for_tracking and
+# read_trial remain exported by the model module for compatibility.
+from carla_model_m6b4 import model_for_tracking, read_trial
+from carla_m6b_common import DT, digest, finite, wrap
 import carla_track_m6b4 as old
 
 SCHEMA='m6b4b-perturbed-empirical-reference-v1'
